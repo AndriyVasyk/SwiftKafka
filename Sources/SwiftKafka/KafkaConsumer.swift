@@ -17,6 +17,7 @@
 import Crdkafka
 import Foundation
 import Dispatch
+import Logging
 
 /**
  A `KafkaClient` for consuming messages on a topic from a broker. 
@@ -52,6 +53,7 @@ public class KafkaConsumer: KafkaClient {
         try super.init(clientType: .consumer, config: config)
         let setResult = rd_kafka_poll_set_consumer(kafkaHandle)
         guard Int(setResult.rawValue) == 0 else {
+            KafkaConsumer.logger.error("KafkaConsumer not configuration, because setResult: \(setResult) equal 0")
             throw KafkaError(rawValue: Int(setResult.rawValue))
         }
     }
@@ -77,6 +79,7 @@ public class KafkaConsumer: KafkaClient {
         }
         let result = rd_kafka_subscribe(kafkaHandle, topicsPointer)
         guard result.rawValue == 0 else {
+            KafkaConsumer.logger.error("KafkaConsumer close, because subscribe result: \(result) equal 0")
             throw KafkaError(rawValue: Int(result.rawValue))
         }
     }
@@ -117,6 +120,7 @@ public class KafkaConsumer: KafkaClient {
                     // We continue here because there could still be more messages on other partitions/topics to be consumed
                     continue
                 } else if msgPointer.pointee.err.rawValue != 0 {
+                    KafkaConsumer.logger.error("KafkaConsumer close, because msgPointer.pointee: \(msgPointer.pointee.err.rawValue) not equal 0")
                     throw KafkaError(rawValue: Int(msgPointer.pointee.err.rawValue))
                 } else {
                     if let record = KafkaConsumerRecord(messagePointer: msgPointer) {
@@ -137,6 +141,7 @@ public class KafkaConsumer: KafkaClient {
     public func commitSync() throws {
         let result = rd_kafka_commit(kafkaHandle, nil, 0)  
         guard result.rawValue == 0 else {
+            KafkaConsumer.logger.error("KafkaConsumer close, because result: \(result.rawValue) equal 0")
             throw KafkaError(rawValue: Int(result.rawValue))
         }
     }
@@ -148,6 +153,7 @@ public class KafkaConsumer: KafkaClient {
     public func close() throws {
         let response = rd_kafka_consumer_close(kafkaHandle)
         guard Int(response.rawValue) == 0 else {
+            KafkaConsumer.logger.error("KafkaConsumer close, because response: \(response.rawValue) equal 0")
             throw KafkaError(rawValue: Int(response.rawValue))
         }
         rd_kafka_topic_partition_list_destroy(topicsPointer)
